@@ -22,16 +22,12 @@ typedef struct Pair {
 int max_line;
 
 void * thread_simple(void *arg) {
-	long i = (long)arg;
+	Pair *pair = (Pair *)arg;
+	long i = (long)pair->a;
+	int fd = (int)(long)pair->b;
 	int j = 0;
 
-	int fd;
-	fd = open("c.txt", O_CREAT | O_TRUNC | O_WRONLY, 0664);
-
 	for (j = 0; j < max_line; j++) {
-		/*
-		 * actually, this is wrong, cause each thread got its own inode 
-		 */
 		dprintf(fd, "thread_simple: %ld - %d\n", i, j);
 	}
 	return NULL;
@@ -67,6 +63,7 @@ void * thread_without_lock(void *arg) {
 	Slot *slot = (Slot *)pair->b;
 	int j = 0;
 	char buf[64] = {0};
+	int ret;
 
 	for (j = 0; j < max_line; j++) {
 		snprintf(buf, sizeof(buf), "thread_without_lock: %ld - %d\n", i, j);
@@ -86,11 +83,16 @@ void test_thread(int max_thread) {
 	/*
 	 * test simple thread
 	 */
-	/*
 	t1 = time(NULL);
 
+	int fd = open("c.txt", O_CREAT | O_TRUNC | O_WRONLY, 0664);
+
 	for (i = 0; i < max_thread; i++) {
-		pthread_create(&tids[i], NULL, thread_simple, (void *)i);
+		pair = malloc(sizeof(Pair));
+		pair->a = (void *)i;
+		pair->b = (void *)(long)fd;
+
+		pthread_create(&tids[i], NULL, thread_simple, (void *)pair);
 	}
 
 	for (i = 0; i < max_thread; i++) {
@@ -99,7 +101,6 @@ void test_thread(int max_thread) {
 
 	t2 = time(NULL);
 	printf("test_thread_simple: %ld\n", t2 - t1);
-	*/
 
 	/*
 	 * test lock thread
